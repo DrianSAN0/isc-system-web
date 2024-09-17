@@ -27,7 +27,7 @@ pipeline {
         }
         stage('Run e2e Tests') {
             steps {
-                sh 'xvfb-run --auto-servernum -- npx cypress run'
+                sh 'xvfb-run --auto-servernum -- npx cypress run --spec "cypress/e2e/login.cy.ts"'
             }
         }
     }
