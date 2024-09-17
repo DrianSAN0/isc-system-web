@@ -1,30 +1,27 @@
 pipeline {
     agent any
     tools {
-        nodejs 'node-20'
+nodejs 'nodejs20'
     }
     stages {
         stage('Clone Project') {
             steps {
-                git branch: 'qa', url: 'https://github.com/DrianSAN0/isc-system-web.git'
+ git branch:'qa', url: 'https://github.com/DrianSAN0/isc-system-web.git'
             }
         }
-        stage('Install npm Dependencies') {
+        stage('Install Dependencies') {
             steps {
-                sh 'npm install -g yarn'
-                sh 'yarn install'
-            }
-        }
-        stage('System Setup') {
-            steps {
-                sh 'sudo apt-get update'
-                sh 'sudo apt-get install -y xvfb'
                 sh 'npm install'
             }
         }
-        stage('Run Cypress Tests (xvfb)') {
+        stage('Build') {
             steps {
-                sh 'xvfb-run npx cypress run'
+                sh 'npm run build'
+            }
+        }
+        stage('Cypress tests') {
+            steps {
+                sh 'npx cypress run'
             }
         }
     }
