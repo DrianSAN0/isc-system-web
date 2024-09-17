@@ -11,7 +11,8 @@ pipeline {
         }
         stage('Install npm Dependencies') {
             steps {
-                sh 'npm install --legacy-peer-deps'
+                sh 'npm install -g yarn'
+                sh 'yarn install'
             }
         }
         stage('System Setup') {
