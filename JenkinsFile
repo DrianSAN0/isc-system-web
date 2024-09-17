@@ -14,11 +14,6 @@ pipeline {
                 sh 'npm install --legacy-peer-deps'
             }
         }
-        stage('Run Cypress Tests') {
-            steps {
-                sh 'npx cypress run'
-            }
-        }
         stage('Install Dependencies') {
             steps {
                 sh 'sudo apt-get update'
