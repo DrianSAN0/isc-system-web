@@ -6,23 +6,28 @@ pipeline {
     stages {
         stage('Clone Project') {
             steps {
-                git branch:'qa', url: 'https://github.com/DrianSAN0/isc-system-web.git'
+                git branch: 'qa', url: 'https://github.com/DrianSAN0/isc-system-web.git'
             }
         }
-        stage('Install Dependencies') {
+        stage('Install npm Dependencies') {
             steps {
                 sh 'npm install --legacy-peer-deps'
             }
         }
-        stage('Install Dependencies') {
+        stage('Run Cypress Tests (npm)') {
+            steps {
+                sh 'npx cypress run'
+            }
+        }
+        stage('System Setup') {
             steps {
                 sh 'sudo apt-get update'
                 sh 'sudo apt-get install -y xvfb'
                 sh 'npm install'
             }
         }
-        stage('Run Cypress Tests') {
-             steps {
+        stage('Run Cypress Tests (xvfb)') {
+            steps {
                 sh 'xvfb-run npx cypress run'
             }
         }
