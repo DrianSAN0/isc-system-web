@@ -1,6 +1,7 @@
-import { create } from "zustand";
-import { Seminar } from "../models/studentProcess";
-import { UserResponse } from "../services/models/LoginResponse";
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { Seminar } from '../models/studentProcess';
+import { UserResponse } from '../services/models/LoginResponse';
 
 interface IProcessStore {
   process: Seminar | null;
@@ -13,11 +14,18 @@ interface IUserStore {
   clearUser: () => void;
 }
 
-export const useUserStore = create<IUserStore>((set) => ({
-  user: null,
-  setUser: (user) => set({ user }),
-  clearUser: () => set({ user: null }),
-}));
+export const useUserStore = create<IUserStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      setUser: (user) => set({ user }),
+      clearUser: () => set({ user: null }),
+    }),
+    {
+      name: 'user-storage', // clave en localStorage
+    }
+  )
+);
 
 export const useProcessStore = create<IProcessStore>((set) => ({
   process: null,

@@ -8,14 +8,17 @@ export interface Student {
   reviewer_name: string;
   period: string;
   id: number;
+  isIntern?: boolean;
+
 }
 
 export interface StudentForm {
-  id: number;
+  id?: number;
   name: string;
   lastname: string;
   mothername: string;
   email: string;
   phone: string;
-  code: number;
+  code: string;
+  is_scholarship?: boolean;
 }

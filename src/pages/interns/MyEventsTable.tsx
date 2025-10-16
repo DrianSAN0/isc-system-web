@@ -10,16 +10,16 @@ import {
   Typography,
 } from "@mui/material";
 import { DataGrid, GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import CloseIcon from "@mui/icons-material/Close";
+import CancelIcon from "@mui/icons-material/Cancel";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import ContainerPage from "../../components/common/ContainerPage";
 import { useUserStore } from "../../store/store";
-import { getInternEvents } from "../../services/internService";
+import { getInternByUserIdService, getInternEvents } from "../../services/internService";
 import { deleteInternFromEventService } from "../../services/eventsService";
 import { EventInternsType } from "../../models/eventInterface";
+import { InternsInformation } from "../../models/internsInterface";
+import dataGridLocaleText from "../../locales/datagridLocaleEs";
 
 interface RowData {
   id?: number;
@@ -54,7 +54,7 @@ const MyEventsTable = () => {
     };
     return statusMap[status.toLowerCase()] || status;
   };
-
+  const [internInfomation, setInternInfomation] = useState<InternsInformation>();
   const user = useUserStore((state) => state.user);
   const [events, setEvents] = useState<EventInternsType[]>();
   const [rows, setRows] = useState<RowData[]>([]);
@@ -66,21 +66,18 @@ const MyEventsTable = () => {
   } | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
-  const navigate = useNavigate();
-  const handleBackClick = () => {
-    navigate("/scholarshipHours");
-  };
-
   const fetchMyEvents = async () => {
-    const res = await getInternEvents(1);
-    if (res.success) {
-      setEvents(res.data);
+    if (internInfomation?.id_intern) {
+      const res = await getInternEvents(internInfomation?.id_intern);
+      if (res.success) {
+        setEvents(res.data);
+      }
     }
   };
 
   useEffect(() => {
     fetchMyEvents();
-  }, []);
+  }, [internInfomation]);
 
   useEffect(() => {
     events &&
@@ -88,9 +85,9 @@ const MyEventsTable = () => {
         events.map((event) => ({
           id: event.id,
           name: event.title,
-          startDate: `${dayjs(event.start_date).format("DD/MM")} -${dayjs(
-            event.end_date
-          ).format("DD/MM")}`,
+          startDate: `${dayjs(event.start_date).format("DD/MM")} -${dayjs(event.end_date).format(
+            "DD/MM"
+          )}`,
           inscriptionPeriod: dayjs(event.registration_deadline).format("DD/MM"),
           cancelPeriod: `${
             dayjs(event.start_cancellation_date)?.format("DD/MM") ?? "N/A"
@@ -155,12 +152,8 @@ const MyEventsTable = () => {
             backgroundColor: "#191970",
             color: "#FFFFFF",
           }}
-          onMouseOver={(e) =>
-            (e.currentTarget.style.backgroundColor = "#99c2ff")
-          }
-          onMouseOut={(e) =>
-            (e.currentTarget.style.backgroundColor = "#191970")
-          }
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#99c2ff")}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#191970")}
         >
           Cancelar
         </Button>
@@ -194,22 +187,42 @@ const MyEventsTable = () => {
     setDialogOpen(false);
   };
 
-  const handleConfirmDelete = async () => {
-    if (selectedEventId === null) return;
+  const fetchIntern = async () => {
+    try {
+      const res = await getInternByUserIdService(user!.id);
+      setInternInfomation(res.data);
+    } catch (error) {
+      console.error("Error fetching Intern:", error);
+    }
+  };
 
-    const res = await deleteInternFromEventService(selectedEventId, user!.id);
-    if (res.success) {
-      setAlert({
-        severity: "success",
-        message: `Evento eliminado con éxito.`,
-      });
-      fetchMyEvents();
+  useEffect(() => {
+    fetchIntern();
+  }, []);
+
+  const handleConfirmDelete = async () => {
+    if (!selectedEventId) return;
+    if (internInfomation?.id_intern) {
+      const res = await deleteInternFromEventService(selectedEventId, internInfomation.id_intern);
+      if (res.success) {
+        setAlert({
+          severity: "success",
+          message: `Evento eliminado con éxito.`,
+        });
+        fetchMyEvents();
+      } else {
+        setAlert({
+          severity: "error",
+          message: `No se pudo eliminar el evento. Por favor, intenta de nuevo más tarde.`,
+        });
+      }
     } else {
       setAlert({
         severity: "error",
-        message: `No se pudo eliminar el evento. Por favor, intenta de nuevo más tarde.`,
+        message: "No se encontró el ID del becario.",
       });
     }
+
     setSnackbarOpen(true);
     setDialogOpen(false);
   };
@@ -219,40 +232,17 @@ const MyEventsTable = () => {
   };
   return (
     <>
-      <div
-        style={{ position: "relative", height: "100vh", paddingTop: "19px" }}
-      >
-        <IconButton
-          onClick={handleBackClick}
-          aria-label="back"
-          style={{
-            position: "absolute",
-            top: "17px",
-            left: "-9px",
-            zIndex: 1,
-          }}
-        >
-          <ArrowBackIcon />
-        </IconButton>
+      <div style={{ position: "relative", height: "100vh", paddingTop: "19px" }}>
         <ContainerPage
           title="Eventos actuales"
           subtitle="Administra y visualiza tus eventos"
-          actions={
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => navigate("/eventHistory")}
-              >
-                HISTORIAL
-              </Button>
-            </>
-          }
+          actions={<></>}
         >
           <div style={{ height: 500, width: "100%" }}>
             <DataGrid
               rows={rows || []}
               columns={columns}
+              localeText={dataGridLocaleText}
               initialState={{
                 pagination: {
                   paginationModel: { page: 0, pageSize: 5 },
@@ -289,14 +279,14 @@ const MyEventsTable = () => {
           <IconButton
             aria-label="close"
             onClick={handleDialogClose}
-            sx={{
+            style={{
+              color: "#231F74",
               position: "absolute",
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
+              right: 3,
+              top: 11,
             }}
           >
-            <CloseIcon />
+            <CancelIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent>
@@ -309,7 +299,7 @@ const MyEventsTable = () => {
             onClick={handleDialogClose}
             variant="contained"
             sx={{
-              backgroundColor: "primary",
+              backgroundColor: "#231F74",
               color: "white",
               marginRight: 2,
               fontWeight: "bold",
@@ -334,16 +324,8 @@ const MyEventsTable = () => {
       </Dialog>
 
       {alert && (
-        <Snackbar
-          open={snackbarOpen}
-          autoHideDuration={6000}
-          onClose={handleSnackbarClose}
-        >
-          <Alert
-            onClose={handleSnackbarClose}
-            severity={alert.severity}
-            sx={{ width: "100%" }}
-          >
+        <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={handleSnackbarClose}>
+          <Alert onClose={handleSnackbarClose} severity={alert.severity} sx={{ width: "100%" }}>
             {alert.message}
           </Alert>
         </Snackbar>

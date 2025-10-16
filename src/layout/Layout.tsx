@@ -21,6 +21,15 @@ interface AppBarProps extends MuiAppBarProps {
 }
 const drawerWidth = 240;
 
+const TranslateRole = (rol: string) => {
+  const translatedRoles: { [key: string]: string } = {
+    professor: "Profesor",
+    student: "Estudiante",
+    admin: "Administrador",
+  };
+  return translatedRoles[rol] || rol;
+};
+
 const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
 })<AppBarProps>(({ theme, open }) => ({
@@ -62,15 +71,15 @@ const Layout = () => {
       title: "Logout",
       onClick: () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("sessionActive");
+
         clearUser();
         navigate("/login", { replace: true });
       },
     },
   ];
 
-  const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(
-    null
-  );
+  const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElUser(event.currentTarget);
@@ -112,16 +121,12 @@ const Layout = () => {
             >
               {user?.name}
             </Typography>
-            <Typography
-              variant="subtitle2"
-              color="textSecondary"
-              textAlign={"right"}
-            >
-              {user?.roles}
+            <Typography variant="subtitle2" color="textSecondary" textAlign={"right"}>
+              {TranslateRole(user?.roles?.join(", ") || "")}
             </Typography>
           </Box>
 
-          <Tooltip title="Open settings">
+          <Tooltip data-test-id="user_icon" title="Abrir configuraciones">
             <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
               <Avatar alt={user?.name} src="/static/images/avatar/2.jpg" />
             </IconButton>
@@ -143,7 +148,11 @@ const Layout = () => {
             onClose={handleCloseUserMenu}
           >
             {settings.map((setting) => (
-              <MenuItem key={setting.title} onClick={setting.onClick}>
+              <MenuItem
+                key={setting.title}
+                data-test-id={setting.title === "Logout" ? "logout_button" : undefined}
+                onClick={setting.onClick}
+              >
                 <Typography textAlign="center">{setting.title}</Typography>
               </MenuItem>
             ))}
@@ -151,7 +160,7 @@ const Layout = () => {
         </Toolbar>
       </AppBar>
       <Sidebar open={open} setOpen={setOpen} />
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, overflowX: "auto", width: "100%" }}>
         <DrawerHeader />
         <Outlet />
       </Box>

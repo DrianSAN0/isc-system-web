@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import {
@@ -8,6 +8,9 @@ import {
   Button,
   Divider,
   IconButton,
+  InputLabel,
+  FormControl,
+  Autocomplete,
 } from "@mui/material";
 import * as Yup from "yup";
 import { useFormik } from "formik";
@@ -20,27 +23,110 @@ import ErrorDialog from "../../components/common/ErrorDialog.tsx";
 import SuccessDialog from "../../components/common/SucessDialog.tsx";
 import { Event } from "../../models/eventInterface.ts";
 import { createEventService } from "../../services/eventsService.ts";
+import { InternsInformation } from "../../models/internsInterface.ts";
+import { getInternList } from "../../services/internService.ts";
 
 const validationSchema = Yup.object({
-  title: Yup.string().required("El nombre del evento es obligatorio"),
-  description: Yup.string().required("La descripción es obligatoria"),
-  location: Yup.string().required("La ubicacion es obligatorio"),
-  start_date: Yup.date().required("La fecha es obligatoria"),
-  end_date: Yup.date().required("La fecha de finalización es obligatoria"),
-  registration_deadline: Yup.date().required(
-    "La fecha límite de inscripción obligatoria"
-  ),
+  title: Yup.string()
+    .required("El nombre del evento es obligatorio")
+    .min(5, "El nombre del evento debe tener al menos 5 caracteres")
+    .max(20, "El nombre del evento no puede tener más de 20 caracteres"),
+  description: Yup.string()
+    .required("La descripción es obligatoria")
+    .min(30, "El nombre del evento debe tener al menos 20 caracteres")
+    .max(200, "El nombre del evento no puede tener más de 200 caracteres"),
+  location: Yup.string().required("La ubicación es obligatoria"),
+  start_date: Yup.date()
+    .required("La fecha de inicio es obligatoria")
+    .min(
+      dayjs().startOf("day").toDate(),
+      "La fecha de inicio debe ser igual o posterior al día actual"
+    )
+    .max(
+      dayjs().add(2, "year").toDate(),
+      "La fecha de inicio no puede ser posterior a dos años desde la fecha actual"
+    ),
+  end_date: Yup.date()
+    .required("La fecha de finalización es obligatoria")
+    .min(
+      dayjs().startOf("day").toDate(),
+      "La fecha de finalización debe ser igual o posterior al día actual"
+    )
+    .max(
+      dayjs().add(2, "year").toDate(),
+      "La fecha de finalización no puede ser posterior a dos años desde la fecha actual"
+    )
+    .test(
+      "is-after-or-same-as-start",
+      "La fecha de finalización debe ser igual o posterior a la fecha de inicio",
+      function (value) {
+        const { start_date } = this.parent;
+        return (
+          dayjs(value).isSame(dayjs(start_date), "day") ||
+          dayjs(value).isAfter(dayjs(start_date), "day")
+        );
+      }
+    ),
+  start_cancellation_date: Yup.date()
+    .required("La fecha de inicio de bajas es obligatoria")
+    .min(
+      dayjs().startOf("day").toDate(),
+      "La fecha de inicio de bajas debe ser igual o posterior al día actual"
+    )
+    .max(
+      dayjs().add(2, "year").toDate(),
+      "La fecha de inicio de bajas no puede ser posterior a dos años desde la fecha actual"
+    ),
+  end_cancellation_date: Yup.date()
+    .required("La fecha de fin de bajas es obligatoria")
+    .min(
+      dayjs().startOf("day").toDate(),
+      "La fecha de fin de bajas debe ser igual o posterior al día actual"
+    )
+    .max(
+      dayjs().add(2, "year").toDate(),
+      "La fecha de fin de bajas no puede ser posterior a dos años desde la fecha actual"
+    )
+    .test(
+      "is-before-start",
+      "La fecha límite debe ser anterior a la fecha de inicio",
+      function (value) {
+        const { start_date } = this.parent;
+        return dayjs(value).isBefore(dayjs(start_date));
+      }
+    ),
+  registration_deadline: Yup.date()
+    .required("La fecha límite de inscripción es obligatoria")
+    .min(
+      dayjs().startOf("day").toDate(),
+      "La fecha límite de inscripción debe ser igual o posterior al día actual"
+    )
+    .max(
+      dayjs().add(2, "year").toDate(),
+      "La fecha límite de inscripción no puede ser posterior a dos años desde la fecha actual"
+    )
+    .test(
+      "is-before-start",
+      "La fecha límite debe ser anterior a la fecha de inicio",
+      function (value) {
+        const { start_date } = this.parent;
+        return dayjs(value).isBefore(dayjs(start_date));
+      }
+    ),
   duration_hours: Yup.number()
     .required("La duración es obligatoria")
-    .min(1, "La duracion minima es de 1 hora"),
-  assigned_hours: Yup.string().required("Las horas becarias son obligatorias"),
+    .min(1, "La duración mínima es de 1 hora"),
+  assigned_hours: Yup.number()
+    .required("Las horas becarias son obligatorias")
+    .min(1, "La duración mínima es de 1 hora")
+    .max(168, "La duración máxima es de 168 horas"),
   max_interns: Yup.number()
     .required("El número de becarios es obligatorio")
-    .min(1, "Debe haber al menos un becario"),
+    .min(1, "Debe haber al menos un becario")
+    .min(Yup.ref("min_interns"), "Debe ser mayor a Mínimo de Becarios"),
   min_interns: Yup.number()
     .required("La cantidad mínima de becarios es obligatoria")
     .min(1, "Debe haber al menos 1 becario"),
-
   responsible_intern_id: Yup.number().notRequired(),
 });
 
@@ -50,9 +136,22 @@ const CreateForm = () => {
   const [message, setMessage] = useState("");
   const [successDialog, setSuccessDialog] = useState(false);
   const [errorDialog, setErrorDialog] = useState(false);
+  const [interns, setInterns] = useState<InternsInformation[]>([]);
 
   dayjs.extend(utc);
   dayjs.extend(timezone);
+
+  useEffect(() => {
+    const fetchInterns = async () => {
+      try {
+        const response = await getInternList();
+        setInterns(response.data);
+      } catch (error) {
+        console.error("Error al cargar becarios", error);
+      }
+    };
+    fetchInterns();
+  }, []);
 
   const sucessDialogClose = () => {
     setSuccessDialog(false);
@@ -83,33 +182,37 @@ const CreateForm = () => {
       location: "",
       max_interns: 0,
       min_interns: 0,
+      is_finished: false,
       registration_deadline: "",
       start_cancellation_date: "",
       end_cancellation_date: "",
-      responsible_intern_id: 0
+      responsible_intern_id: -1,
     },
     validationSchema,
     onSubmit: async () => {
       setLoading(true);
       try {
         const formatWithTimezone = (date: string) =>
-          dayjs(date).tz("America/Caracas").format();
+          dayjs(date)
+            .tz("America/Caracas")
+            .set("hour", 23)
+            .set("minute", 59)
+            .set("second", 59)
+            .format();
 
         const valuesWithTimezone = {
           ...formik.values,
           start_date: formatWithTimezone(formik.values.start_date),
           end_date: formatWithTimezone(formik.values.end_date),
-          start_cancellation_date: formatWithTimezone(
-            formik.values.start_cancellation_date!
-          ),
-          end_cancellation_date: formatWithTimezone(
-            formik.values.end_cancellation_date!
-          ),
-          registration_deadline: formatWithTimezone(
-            formik.values.registration_deadline
-          ),
+          start_cancellation_date: formatWithTimezone(formik.values.start_cancellation_date!),
+          end_cancellation_date: formatWithTimezone(formik.values.end_cancellation_date!),
+          registration_deadline: formatWithTimezone(formik.values.registration_deadline),
         };
-        const res = await createEventService(valuesWithTimezone);
+
+        const { responsible_intern_id, ...eventData } = valuesWithTimezone;
+        const finalEventData =
+          responsible_intern_id === -1 ? eventData : { ...eventData, responsible_intern_id };
+        await createEventService(finalEventData);
         formik.resetForm();
         navigate("/programDirector");
         setMessage("Evento creado con éxito");
@@ -139,11 +242,7 @@ const CreateForm = () => {
           <Grid container spacing={2} sx={{ padding: 2 }}>
             <Grid item xs={12}>
               <Typography variant="h4">Crear Nuevo Evento</Typography>
-              <Typography
-                margin="normal"
-                variant="body2"
-                sx={{ fontSize: 14, color: "gray" }}
-              >
+              <Typography margin="normal" variant="body2" sx={{ fontSize: 14, color: "gray" }}>
                 Ingrese los datos del evento a continuación.
               </Typography>
               <Divider flexItem sx={{ mt: 2, mb: 2 }} />
@@ -163,9 +262,7 @@ const CreateForm = () => {
                       fullWidth
                       value={formik.values.title}
                       onChange={formik.handleChange}
-                      error={
-                        formik.touched.title && Boolean(formik.errors.title)
-                      }
+                      error={formik.touched.title && Boolean(formik.errors.title)}
                       helperText={formik.touched.title && formik.errors.title}
                       margin="normal"
                     />
@@ -181,13 +278,8 @@ const CreateForm = () => {
                       rows={4}
                       value={formik.values.description}
                       onChange={formik.handleChange}
-                      error={
-                        formik.touched.description &&
-                        Boolean(formik.errors.description)
-                      }
-                      helperText={
-                        formik.touched.description && formik.errors.description
-                      }
+                      error={formik.touched.description && Boolean(formik.errors.description)}
+                      helperText={formik.touched.description && formik.errors.description}
                       margin="normal"
                     />
                   </Grid>
@@ -200,13 +292,8 @@ const CreateForm = () => {
                       fullWidth
                       value={formik.values.location}
                       onChange={formik.handleChange}
-                      error={
-                        formik.touched.location &&
-                        Boolean(formik.errors.location)
-                      }
-                      helperText={
-                        formik.touched.location && formik.errors.location
-                      }
+                      error={formik.touched.location && Boolean(formik.errors.location)}
+                      helperText={formik.touched.location && formik.errors.location}
                       margin="normal"
                     />
                   </Grid>
@@ -222,14 +309,8 @@ const CreateForm = () => {
                         fullWidth
                         value={formik.values.start_date}
                         onChange={formik.handleChange}
-                        error={
-                          formik.touched.start_date &&
-                          Boolean(formik.errors.start_date)
-                        }
-                        helperText={
-                          formik!.touched.start_date &&
-                          formik!.errors.start_date
-                        }
+                        error={formik.touched.start_date && Boolean(formik.errors.start_date)}
+                        helperText={formik!.touched.start_date && formik!.errors.start_date}
                         InputLabelProps={{
                           shrink: true,
                         }}
@@ -246,13 +327,8 @@ const CreateForm = () => {
                         margin="normal"
                         value={formik.values.end_date}
                         onChange={formik.handleChange}
-                        error={
-                          formik.touched.end_date &&
-                          Boolean(formik.errors.end_date)
-                        }
-                        helperText={
-                          formik.touched.end_date && formik.errors.end_date
-                        }
+                        error={formik.touched.end_date && Boolean(formik.errors.end_date)}
+                        helperText={formik.touched.end_date && formik.errors.end_date}
                         InputLabelProps={{
                           shrink: true,
                         }}
@@ -342,13 +418,15 @@ const CreateForm = () => {
                         value={formik.values.duration_hours}
                         onChange={formik.handleChange}
                         error={
-                          formik.touched.duration_hours &&
-                          Boolean(formik.errors.duration_hours)
+                          formik.touched.duration_hours && Boolean(formik.errors.duration_hours)
                         }
-                        helperText={
-                          formik.touched.duration_hours &&
-                          formik.errors.duration_hours
-                        }
+                        helperText={formik.touched.duration_hours && formik.errors.duration_hours}
+                        inputProps={{ min: 0 }}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") {
+                            e.preventDefault();
+                          }
+                        }}
                       />
                     </Grid>
                   </Grid>
@@ -375,13 +453,15 @@ const CreateForm = () => {
                         value={formik.values.assigned_hours}
                         onChange={formik.handleChange}
                         error={
-                          formik.touched.assigned_hours &&
-                          Boolean(formik.errors.assigned_hours)
+                          formik.touched.assigned_hours && Boolean(formik.errors.assigned_hours)
                         }
-                        helperText={
-                          formik.touched.assigned_hours &&
-                          formik.errors.assigned_hours
-                        }
+                        helperText={formik.touched.assigned_hours && formik.errors.assigned_hours}
+                        inputProps={{ min: 0 }}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") {
+                            e.preventDefault();
+                          }
+                        }}
                       />
                     </Grid>
                     <Grid item xs={3}>
@@ -395,14 +475,14 @@ const CreateForm = () => {
                         fullWidth
                         value={formik.values.min_interns}
                         onChange={formik.handleChange}
-                        error={
-                          formik.touched.min_interns &&
-                          Boolean(formik.errors.min_interns)
-                        }
-                        helperText={
-                          formik.touched.min_interns &&
-                          formik.errors.min_interns
-                        }
+                        error={formik.touched.min_interns && Boolean(formik.errors.min_interns)}
+                        helperText={formik.touched.min_interns && formik.errors.min_interns}
+                        inputProps={{ min: 0 }}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") {
+                            e.preventDefault();
+                          }
+                        }}
                       />
                     </Grid>
                     <Grid item xs={3}>
@@ -416,62 +496,71 @@ const CreateForm = () => {
                         fullWidth
                         value={formik.values.max_interns}
                         onChange={formik.handleChange}
-                        error={
-                          formik.touched.max_interns &&
-                          Boolean(formik.errors.max_interns)
-                        }
-                        helperText={
-                          formik.touched.max_interns &&
-                          formik.errors.max_interns
-                        }
+                        error={formik.touched.max_interns && Boolean(formik.errors.max_interns)}
+                        helperText={formik.touched.max_interns && formik.errors.max_interns}
+                        inputProps={{ min: 0 }}
+                        onKeyDown={(e) => {
+                          if (e.key === "-" || e.key === "e" || e.key === "E") {
+                            e.preventDefault();
+                          }
+                        }}
                       />
                     </Grid>
                   </Grid>
                 </Grid>
               </Grid>
+              <Divider flexItem sx={{ mt: 2, mb: 2 }} />
             </Grid>
-            <Grid item xs={12} >
-            <Grid container spacing={2} sx={{padding: 2}}>
-              <Grid item xs={3}>
-                <Typography variant="h6" >Encargado</Typography>
+            <Grid container alignItems="center" style={{ marginLeft: "5%" }}>
+              <Grid item xs={4} style={{ marginLeft: "-10px" }}>
+                <Typography variant="h6" style={{ marginTop: "5px" }}>
+                  Supervisor
+                </Typography>
               </Grid>
-              <Grid item xs={9}>
-              <TextField
-                id="responsible_intern_id"
-                name="responsible_intern_id"
-                label="Encargado"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                type="number"
-                value={formik.values.responsible_intern_id}
-                onChange={formik.handleChange}
-                error={formik.touched.responsible_intern_id && Boolean(formik.errors.responsible_intern_id)}
-                helperText={formik.touched.responsible_intern_id && formik.errors.responsible_intern_id}
-              />
+              <Grid item xs={7}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel></InputLabel>
+                  <Autocomplete
+                    id="responsible_intern_id"
+                    options={interns || []}
+                    getOptionLabel={(option) =>
+                      `${option.code + "  " + option.name + "  " + option.lastname}`
+                    }
+                    value={
+                      interns.find((intern) => intern.id === formik.values.responsible_intern_id) ||
+                      null
+                    }
+                    onChange={(_, newValue) =>
+                      formik.setFieldValue("responsible_intern_id", newValue?.id || "")
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Supervisor"
+                        variant="outlined"
+                        error={
+                          formik.touched.responsible_intern_id &&
+                          Boolean(formik.errors.responsible_intern_id)
+                        }
+                        helperText={
+                          formik.touched.responsible_intern_id &&
+                          formik.errors.responsible_intern_id
+                        }
+                      />
+                    )}
+                  />
+                </FormControl>
               </Grid>
-
             </Grid>
-          </Grid>    
-          
           </Grid>
-          <Grid
-            container
-            spacing={2}
-            justifyContent="flex-end"
-            style={{ marginTop: "20px" }}
-          >
+          <Grid container spacing={2} justifyContent="flex-end" style={{ marginTop: "90px" }}>
             <Grid item>
               <Button variant="contained" color="primary" type="submit">
                 Crear
               </Button>
             </Grid>
             <Grid item>
-              <Button
-                variant="outlined"
-                color="secondary"
-                onClick={handleCancel}
-              >
+              <Button variant="outlined" color="secondary" onClick={handleCancel}>
                 Cancelar
               </Button>
             </Grid>

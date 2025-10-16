@@ -1,56 +1,58 @@
-import { User } from "../models/userInterface";
-import jsonClient from "./jsonServerInstance";
+import { UserRequest } from '../models/userInterface';
+import apiClient from './apiInstance';
+
+const baseURL = 'user';
 
 export const getUsers = async () => {
   try {
-    const response = await jsonClient.get("users/");
+    const response = await apiClient.get(baseURL);
     if (response.status === 200) {
       return response.data;
     } else {
-      throw new Error("Failed to fetch users");
+      throw new Error('Failed to fetch users');
     }
   } catch (error) {
-    throw new Error("Failed to fetch users " + (error as Error).message);
+    throw new Error('Failed to fetch users ' + (error as Error).message);
   }
 };
 
 export const deleteUser = async (id: number) => {
   try {
-    const response = await jsonClient.delete(`/users/${id}`);
+    const response = await apiClient.delete(`${baseURL}/${id}`);
     return response.data;
   } catch (error) {
-    throw new Error("Failed to delete user " + (error as Error).message);
+    throw new Error('Failed to delete user ' + (error as Error).message);
   }
 };
 
-export const postUser = async (user: User) => {
+export const postUser = async (user: UserRequest) => {
   try {
-    const response = await jsonClient.post(`/users`, user);
+    const response = await apiClient.post(baseURL, user);
     return response.data;
   } catch (error) {
-    throw new Error("Failed to post user " + (error as Error).message);
+    throw new Error('Failed to post user ' + (error as Error).message);
   }
 };
 
-export const putUser = async (id: number, user: User) => {
+export const putUser = async (id: number, user: UserRequest) => {
   try {
-    const response = await jsonClient.put(`/users/${id}`, user);
+    const response = await apiClient.put(`${baseURL}/${id}`, user);
     return response.data;
   } catch (error) {
-    throw new Error("Failed to put user " + (error as Error).message);
+    throw new Error('Failed to put user ' + (error as Error).message);
   }
 };
 
 export const getUserById = async (id: number) => {
   try {
-    const response = await jsonClient.get(`/users/${id}`);
+    const response = await apiClient.get(`${baseURL}/${id}`);
     return response.data;
   } catch (error) {
-    throw new Error("Failed to get user by id" + (error as Error).message);
+    throw new Error('Failed to get user by id' + (error as Error).message);
   }
 };
 
-export const createUserWIthRoles = async (student: User) => {
-  const response = await jsonClient.post("/users", student);
+export const createUserWIthRoles = async (user: UserRequest) => {
+  const response = await apiClient.post(baseURL, user);
   return response.data;
 };

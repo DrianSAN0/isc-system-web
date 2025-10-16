@@ -1,39 +1,48 @@
 import React, { useState } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import {
-  Button,
-  Divider,
-  Grid,
-  MenuItem,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Button, Divider, Grid, MenuItem, TextField, Typography } from "@mui/material";
 import { ProfessorInterface } from "../../services/models/Professor";
 import { createProfessor } from "../../services/mentorsService";
-import { FormContainer } from "../CreateGraduation/components/FormContainer";
 import ErrorDialog from "../../components/common/ErrorDialog";
 import SuccessDialog from "../../components/common/SucessDialog";
-import LoadingOverlay from "../../components/common/Loading";
+import {
+  PHONE_ERROR_MESSAGE,
+  CODE_ERROR_MESSAGE,
+  CODE_DIGITS,
+  CODE_MIN_DIGITS,
+  PHONE_DIGITS,
+  LETTERS_REGEX,
+  PHONE_REGEX,
+  CODE_REGEX,
+} from "../../constants/validation";
+
+
 const validationSchema = Yup.object({
-  name: Yup.string().required("El nombre completo es obligatorio"),
-  lastname: Yup.string().required("El apellido es obligatorio"),
-  mothername: Yup.string().required("El apellido materno es obligatorio"),
+  name: Yup.string()
+    .matches(LETTERS_REGEX, "El nombre solo debe contener letras")
+    .required("El nombre completo es obligatorio"),
+  lastname: Yup.string()
+    .matches(LETTERS_REGEX, "El apellido paterno solo debe contener letras")
+    .required("El apellido es obligatorio"),
+  mothername: Yup.string()
+    .matches(LETTERS_REGEX, "El apellido materno solo debe contener letras")
+    .required("El apellido materno es obligatorio"),
   email: Yup.string()
     .email("Ingrese un correo electrónico válido")
     .required("El correo electrónico es obligatorio"),
   phone: Yup.string()
-    .matches(
-      /^\+\d{1,3}\s\d+$/,
-      "El número de teléfono debe tener una extensión válida y un número de teléfono",
-    )
+    .matches(PHONE_REGEX, PHONE_ERROR_MESSAGE)
     .required("El número de teléfono es requerido"),
   degree: Yup.string().required("El título académico es obligatorio"),
-  code: Yup.number().required("El código de docente es obligatorio"),
+  code: Yup.string()
+    .matches(CODE_REGEX, CODE_ERROR_MESSAGE)
+    .required("El código de docente es obligatorio"),
+
 });
 
-const CreateProfessorPage = () => {
-  const [loading, setLoading] = useState(false);
+
+const CreateProfessorForm = () => {
   const [message, setMessage] = useState("");
   const [successDialog, setSuccessDialog] = useState(false);
   const [errorDialog, setErrorDialog] = useState(false);
@@ -59,27 +68,29 @@ const CreateProfessorPage = () => {
     },
     validationSchema,
     onSubmit: async (values) => {
-      setLoading(true);
       try {
-        await createProfessor(values);
+      
+        const professorData = {
+          ...values,
+          code: values.code,
+        };
+        await createProfessor(professorData as any);
         setMessage("Profesor creado con éxito");
         setSuccessDialog(true);
       } catch (error) {
         setMessage("Error al crear el docente");
         setErrorDialog(true);
-      } finally {
-        setLoading(false);
       }
     },
   });
 
   const handlePhoneChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
-    const formattedValue = value
-      .replace(/[^+\d\s]/g, '')
-      .replace(/(\+\d{1,3})\s?(\d{0,})/, '$1 $2');
-    formik.setFieldValue('phone', formattedValue);
+    if (/^[0-9]*$/.test(value)) {
+      formik.setFieldValue("phone", value);
+    }
   };
+
 
   const handleCodeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -88,9 +99,9 @@ const CreateProfessorPage = () => {
     }
   };
 
+
   return (
-    <FormContainer>
-      {loading && <LoadingOverlay message="Creando Docente..." />}
+    <>
       <form onSubmit={formik.handleSubmit}>
         <Grid container spacing={2} sx={{ padding: 2 }}>
           <Grid item xs={12}>
@@ -100,6 +111,7 @@ const CreateProfessorPage = () => {
             </Typography>
             <Divider flexItem sx={{ mt: 2, mb: 2 }} />
           </Grid>
+
 
           <Grid item xs={12}>
             <Grid container spacing={2} sx={{ padding: 2 }}>
@@ -131,13 +143,8 @@ const CreateProfessorPage = () => {
                       fullWidth
                       value={formik.values.lastname}
                       onChange={formik.handleChange}
-                      error={
-                        formik.touched.lastname &&
-                        Boolean(formik.errors.lastname)
-                      }
-                      helperText={
-                        formik.touched.lastname && formik.errors.lastname
-                      }
+                      error={formik.touched.lastname && Boolean(formik.errors.lastname)}
+                      helperText={formik.touched.lastname && formik.errors.lastname}
                       margin="normal"
                     />
                   </Grid>
@@ -152,13 +159,9 @@ const CreateProfessorPage = () => {
                       fullWidth
                       value={formik.values.mothername}
                       onChange={formik.handleChange}
-                      error={
-                        formik.touched.mothername &&
-                        Boolean(formik.errors.mothername)
-                      }
-                      helperText={
-                        formik.touched.mothername && formik.errors.mothername
-                      }
+                      error={formik.touched.mothername &&
+                        Boolean(formik.errors.mothername)}
+                      helperText={formik.touched.mothername && formik.errors.mothername}
                       margin="normal"
                     />
                   </Grid>
@@ -174,7 +177,10 @@ const CreateProfessorPage = () => {
                       error={formik.touched.code && Boolean(formik.errors.code)}
                       helperText={formik.touched.code && formik.errors.code}
                       margin="normal"
-                      inputProps={{ maxLength: 10 }}
+                      inputProps={{ 
+                        maxLength: CODE_DIGITS,
+                        minLength: CODE_MIN_DIGITS
+                      }}
                     />
                   </Grid>
                 </Grid>
@@ -193,13 +199,15 @@ const CreateProfessorPage = () => {
                 >
                   <MenuItem value="">Seleccione un título</MenuItem>
                   <MenuItem value="Ing.">Ing.</MenuItem>
-                  <MenuItem value="Msc">Msc.</MenuItem>
-                  <MenuItem value="PhD">PhD.</MenuItem>
+                  <MenuItem value="M.Sc.">M.Sc.</MenuItem>
+                  <MenuItem value="M.Eng.">M.Eng.</MenuItem>
+                  <MenuItem value="PhD.">PhD.</MenuItem>
                 </TextField>
               </Grid>
             </Grid>
             <Divider flexItem sx={{ my: 2 }} />
           </Grid>
+
 
           <Grid item xs={12}>
             <Grid container spacing={2} sx={{ padding: 2 }}>
@@ -231,7 +239,7 @@ const CreateProfessorPage = () => {
                   error={formik.touched.phone && Boolean(formik.errors.phone)}
                   helperText={formik.touched.phone && formik.errors.phone}
                   margin="normal"
-                  inputProps={{ maxLength: 20 }}
+                  inputProps={{ maxLength: PHONE_DIGITS }}
                 />
               </Grid>
             </Grid>
@@ -239,7 +247,7 @@ const CreateProfessorPage = () => {
           <Grid item xs={12}>
             <Grid container spacing={2} justifyContent="flex-end">
               <Grid item>
-                <Button variant="contained" color="primary" type="submit">
+                <Button variant="contained" color="primary" type="submit" sx={{ mr: 3 }}>
                   GUARDAR
                 </Button>
               </Grid>
@@ -259,8 +267,9 @@ const CreateProfessorPage = () => {
         title={"¡Vaya!"}
         subtitle={message}
       />
-    </FormContainer>
+    </>
   );
 };
 
-export default CreateProfessorPage;
+
+export default CreateProfessorForm;

@@ -301,9 +301,7 @@
       "mothername": "Gutierrez",
       "email": "mildret@quya.com",
       "phone": "70182881",
-      "roles": [
-        "Becario"
-      ],
+      "roles": ["Becario", "student"],
       "degree": "",
       "id": 12347
     },
@@ -314,9 +312,7 @@
       "mothername": "Minerva",
       "email": "hade@hade.com",
       "phone": "79282012",
-      "roles": [
-        "Estudiante"
-      ],
+      "roles": ["Estudiante"],
       "degree": "",
       "id": 12348
     },
@@ -327,10 +323,7 @@
       "mothername": "Gomez",
       "email": "jhony@jhony.com",
       "phone": "78198108",
-      "roles": [
-        "Becario",
-        "Estudiante"
-      ],
+      "roles": ["Becario", "Estudiante"],
       "degree": "",
       "id": 12350
     },
@@ -341,9 +334,7 @@
       "mothername": "Burgoa",
       "email": "amor@amorcito.com",
       "phone": "70182881",
-      "roles": [
-        "Docente"
-      ],
+      "roles": ["Docente"],
       "degree": "PhD",
       "id": 12352
     },
@@ -354,10 +345,7 @@
       "mothername": "Nanda",
       "email": "suvi@suvi.com",
       "phone": "72983018",
-      "roles": [
-        "Estudiante",
-        "Docente"
-      ],
+      "roles": ["Estudiante", "Docente"],
       "degree": "",
       "id": 12353
     },
@@ -368,11 +356,78 @@
       "mothername": "Halim",
       "email": "halim@halim.com",
       "phone": "77219391",
-      "roles": [
-        "Docente"
-      ],
+      "roles": ["Docente"],
       "degree": "PhD",
       "id": 12354
+    },
+    {
+      "name": "Zein",
+      "code": "68391",
+      "lastname": "Tonconi",
+      "mothername": "Mendoza",
+      "email": "zein.tonconi@gmail.com",
+      "phone": "70186881",
+      "roles": ["Estudiante", "Becario"],
+      "degree": "",
+      "id": 12355
+    },
+    {
+      "name": "Ivan",
+      "code": "87291",
+      "lastname": "Baptista",
+      "mothername": "Baptista",
+      "email": "ivan@baptista.com",
+      "phone": "67398383",
+      "roles": ["Docente de Planta"],
+      "degree": "Ing.",
+      "id": 12356
+    },
+    {
+      "name": "Zein",
+      "code": "82910",
+      "lastname": "Tonconi",
+      "mothername": "Mendoza",
+      "email": "zein@zein.com",
+      "phone": "70186881",
+      "roles": ["Becario"],
+      "degree": "",
+      "id": 12357
+    }
+  ],
+  "professorRoles": [
+    {
+      "name": "Docente",
+      "id": 2
+    },
+    {
+      "name": "Docente de Planta",
+      "id": 3
+    },
+    {
+      "name": "Docente por materia",
+      "id": 4
+    },
+    {
+      "name": "Jefe de Carrera",
+      "id": 5
+    }
+  ],
+  "studentRoles": [
+    {
+      "name": "Estudiante",
+      "id": 2
+    },
+    {
+      "name": "Becario",
+      "id": 3
+    },
+    {
+      "name": "En proceso de Graduación",
+      "id": 4
+    },
+    {
+      "name": "Para certificaciones",
+      "id": 5
     }
   ]
 }

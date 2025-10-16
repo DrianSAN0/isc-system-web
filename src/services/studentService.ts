@@ -1,8 +1,23 @@
-import { StudentForm } from "../models/studentInterface";
-import apiClient from "./apiInstance";
+import { StudentForm } from '../models/studentInterface';
+import apiClient from './apiInstance';
 
 export const getStudents = async () => {
-  const response = await apiClient.get("/student");
+  const response = await apiClient.get('/student');
+  return response.data;
+};
+
+export const getInterns = async () => {
+  const response = await apiClient.get('/interns');
+  return response.data;
+};
+
+export const getStudentsForGraduation = async () => {
+  const response = await apiClient.get('/student/graduation');
+  return response.data;
+};
+
+export const getInternsForGraduation = async () => {
+  const response = await apiClient.get('/intern/graduation');
   return response.data;
 };
 
@@ -13,7 +28,7 @@ export const deleteStudent = async (id: number) => {
 
 // TODO: Create the student interface
 export const createStudent = async (student: StudentForm) => {
-  const response = await apiClient.post("/student", student);
+  const response = await apiClient.post('/student', student);
   return response.data;
 };
 
@@ -23,6 +38,9 @@ export const getUserById = async (id: number) => {
 };
 
 export const updateStudent = async (student: StudentForm) => {
-  const response = await apiClient.put(`/student/${student.id}`, student);
+  
+  const { id, ...studentData } = student;
+  
+  const response = await apiClient.put(`/student/${id}`, studentData);
   return response.data;
 };

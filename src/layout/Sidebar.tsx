@@ -9,6 +9,8 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { styled, useTheme, Theme, CSSObject } from "@mui/material/styles";
 import { Divider, ListItemButton } from "@mui/material";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useEffect } from "react";
 
 import UPB_LOGO from "../assets/upb_logo.png";
 import { menu } from "../constants/menu";
@@ -70,22 +72,44 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
   const user = useUserStore((state) => state.user);
   const theme = useTheme();
+  const isSmallOrMediumScreen = useMediaQuery(theme.breakpoints.down("sm"));
   const navigate = useNavigate();
 
-  const handleDrawerClose = () => {
-    setOpen(false);
-  };
+  useEffect(() => {
+    if (isSmallOrMediumScreen) {
+      setOpen(false);
+    } else {
+      setOpen(true);
+    }
+  }, [isSmallOrMediumScreen, setOpen]);
 
   const goToPage = (path: string) => {
     navigate(path);
+    if (isSmallOrMediumScreen) {
+      setOpen(false);
+    }
   };
 
+  for (const key in user?.roles_permissions) {
+    if (!user.roles.some((role) => role == user?.roles_permissions[key].role_name))
+      user.roles.push(user?.roles_permissions[key].role_name);
+  }
+
   const filteredMenu = menu.filter((item) =>
-    item.roles?.some(role => user?.roles?.includes(role))
+    item.roles?.some((role) => user?.roles?.includes(role))
   );
 
   return (
-    <Drawer variant="permanent" open={open}>
+    <Drawer
+      variant="permanent"
+      open={open}
+      onClose={() => setOpen(false)}
+      sx={{
+      "& .MuiDrawer-paper": {
+        width: !open && window.innerWidth < 500 ? 0 : undefined,
+      },
+      }}
+    >
       <DrawerHeader>
         <img
           src={UPB_LOGO}
@@ -93,12 +117,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           style={{ width: "100%", height: "auto", maxWidth: "125px" }}
           className="h-10 ms-6 me-1"
         />
-        <IconButton onClick={handleDrawerClose}>
-          {theme.direction === "rtl" ? (
-            <ChevronRightIcon />
-          ) : (
-            <ChevronLeftIcon />
-          )}
+        <IconButton onClick={() => setOpen(false)}>
+          {theme.direction === "rtl" ? <ChevronRightIcon /> : <ChevronLeftIcon />}
         </IconButton>
       </DrawerHeader>
       <Divider />
@@ -107,6 +127,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
           return (
             <ListItem key={item.key} disablePadding sx={{ display: "block" }}>
               <ListItemButton
+                data-test-id="sidebar-list-button"
                 sx={{
                   minHeight: 48,
                   justifyContent: open ? "initial" : "center",
@@ -124,6 +145,7 @@ const Sidebar: React.FC<SidebarProps> = ({ open, setOpen }) => {
                   {item.icon}
                 </ListItemIcon>
                 <ListItemText
+                  data-test-id="sidebar-list-title"
                   color="primary"
                   primary={item.text}
                   sx={{ opacity: open ? 1 : 0 }}

@@ -1,24 +1,31 @@
+import { Role } from './roleInterface';
 
 export interface User {
-  id?: number;
+  id: number;
   username: string;
   name: string;
   lastname: string;
   mothername: string;
   password: string;
   email: string;
-  code: number;
+  code: string;
   phone: string;
   degree: string;
-  roles: string[]; //TODO: hacer que los roles del db.json sean roles y no strings
+  roles: string[];
+  rolesAndPermissions?: { [id: number]: Role };
 }
 
-
-export interface Student {
-  id: number;
+export interface UserRequest {
   name: string;
+  lastname: string;
+  mothername: string;
+  username?: string;
+  email: string;
   code: string;
-  time: string;
-  status: "Rechazado" | "Pendiente" | "Aceptado";
-  hours: number;
+  phone: string;
+  degree: string;
+  roles: number[];
+  role_id: number;
+  isStudent: boolean;
+  is_scholarship: boolean;
 }
